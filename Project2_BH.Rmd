@@ -1,0 +1,231 @@
+---
+title: "TBANLT560_Project2"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#To start, Load the BreastCancer dataset
+```{r}
+#load the mlbench package which has the BreastCancer data set
+require(mlbench)
+
+# if you don't have any required package, use the install.packages() command
+# load the data set from RStudio
+data(BreastCancer)
+```
+
+#Best practices, time to Clean the Dataset and Parition the Data
+```{r}
+#summarize the data so we can see what variables may need to be cleaned
+summary(BreastCancer)
+
+#Drop any NAs to clean the dataset using na.omit. This prevents future failures in the model that cannot process NAs.
+BreastCancer <- na.omit(BreastCancer)
+
+#ID is a categorical variable that is not used to predict relationships in our mdoels. Therefore, we will make the entire column NULL to maintain intergrity but not break the mdoels.
+BreastCancer$Id <- NULL
+
+##Partition the data into 80% training and 20% validation sets. This will allow us to test and validate our prediction methods for accuracy.
+
+set.seed(1)
+train.index <- sample(row.names(BreastCancer), 0.6*dim(BreastCancer)[1])  
+valid.index <- setdiff(row.names(BreastCancer), train.index)  
+train.df <- BreastCancer[train.index, ]
+valid.df <- BreastCancer[valid.index, ]
+
+```
+
+##First model- Support Vector Machine
+```{r}
+#install and library the package needed for Support Vector Machine Model
+library(e1071)
+
+#Using the training data sets- build the SVM model. You can then use that SVM model to predict the accuracy when applying it to the validation dataset. 
+mysvm <- svm(Class ~ ., train.df)
+mysvm.pred <- predict(mysvm, valid.df)
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(mysvm.pred,valid.df$Class)
+
+```
+
+#Now let's run our Second Model- NaiveBayes Model
+```{r}
+#Install and library the necessary package to run a NaiveBayes Model 
+library(klaR)
+
+#Using the training data sets- build the NB model. You can then use that NB model to predict the accuracy when applying it to the validation dataset. 
+mynb <- NaiveBayes(Class ~ ., train.df)
+mynb.pred <- predict(mynb,valid.df)
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(mynb.pred$class,valid.df$Class)
+
+```
+
+#Thrid Model- NeurualNet
+```{r}
+#Install and library the necessary package to run a NeuralNet Model 
+library(nnet)
+
+#Using the training data sets- build the NN model. You can then use that NN model to predict the accuracy when applying it to the validation dataset. 
+mynnet <- nnet(Class ~ ., train.df, size=1)
+mynnet.pred <- predict(mynnet,valid.df,type="class")
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(mynnet.pred,valid.df$Class)
+```
+
+
+#Fourth Model- Decision Trees
+```{r}
+#Install and library the necessary package to run a Decision Tree Model 
+library(rpart)
+
+#Using the training data sets- build the DT model. You can then use that DT model to predict the accuracy when applying it to the validation dataset.
+mytree <- rpart(Class ~ ., train.df)
+plot(mytree); text(mytree) 
+summary(mytree)
+mytree.pred <- predict(mytree,valid.df,type="class")
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(mytree.pred,valid.df$Class)
+```
+
+#Fith Model- Quadratic Discrimination Analysis
+```{r}
+#Install and library the necessary package to run a Quadratic Discrimination Analysis 
+library(MASS)
+
+#convert to integers for this method- Starting with Training data, create a second set with integers
+train.df2 <- train.df
+train.df2$Cl.thickness<-as.integer(train.df2$Cl.thickness)
+train.df2$Class<-ifelse(as.integer(train.df2$Class)==2,1,0) 
+train.df2$Mitoses<-as.integer(train.df2$Mitoses)
+train.df2$Cell.size<-as.integer(train.df2$Cell.size)
+train.df2$Cell.shape<-as.integer(train.df2$Cell.shape)
+train.df2$Marg.adhesion<-as.integer(train.df2$Marg.adhesion)
+train.df2$Epith.c.size<-as.integer(train.df2$Epith.c.size)
+train.df2$Bare.nuclei<-as.integer(train.df2$Bare.nuclei)
+train.df2$Bl.cromatin<-as.integer(train.df2$Bl.cromatin)
+train.df2$Normal.nucleoli<-as.integer(train.df2$Normal.nucleoli) 
+
+#convert to integers for validation data
+valid.df2 <- valid.df
+valid.df2$Cl.thickness<-as.integer(valid.df2$Cl.thickness)
+valid.df2$Class<-ifelse(as.integer(valid.df2$Class)==2,1,0)
+valid.df2$Mitoses<-as.integer(valid.df2$Mitoses)
+valid.df2$Cell.size<-as.integer(valid.df2$Cell.size)
+valid.df2$Cell.shape<-as.integer(valid.df2$Cell.shape)
+valid.df2$Marg.adhesion<-as.integer(valid.df2$Marg.adhesion)
+valid.df2$Epith.c.size<-as.integer(valid.df2$Epith.c.size)
+valid.df2$Bare.nuclei<-as.integer(valid.df2$Bare.nuclei)
+valid.df2$Bl.cromatin<-as.integer(valid.df2$Bl.cromatin)
+valid.df2$Normal.nucleoli<-as.integer(valid.df2$Normal.nucleoli) 
+
+#Remove the ID column that is categorical for the new training and validation datasets since it is categorical and it does not run in this model type.
+train.df2 <- subset(train.df2, select = -c(1))
+valid.df2 <- subset(valid.df2, select = -c(1))
+
+#Using the training data sets- build the QDA model. You can then use that QDA model to predict the accuracy when applying it to the validation dataset.
+myqda <- qda(Class ~ ., train.df2)
+myqda.pred <- predict(myqda, valid.df2)
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(myqda.pred$class,valid.df2$Class)
+
+```
+
+#Sixth Model- Regularised Discriminant Analysis
+```{r}
+#Install and library the necessary package to run a Regularised Discriminant Analysis (RDA)
+library(klaR)
+
+#Using the training data sets- build the RDA model. You can then use that RDA model to predict the accuracy when applying it to the validation dataset.
+myrda <- rda(Class ~ ., train.df)
+myrda.pred <- predict(myrda, valid.df)
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(myrda.pred$class,valid.df$Class)
+```
+
+#Seventh Model Consideration- A loop to generate a confusion matrix for analysis.
+```{r}
+BreastCancer <- subset(BreastCancer, select = -c(1))
+
+ans <- numeric(length(BreastCancer[,1]))
+for (i in 1:length(BreastCancer[,1])) {
+  mytree <- rpart(Class ~ ., BreastCancer[-i,])
+  mytree.pred <- predict(mytree,BreastCancer[i,],type="class")
+  ans[i] <- mytree.pred}
+
+ans <- factor(ans,labels=levels(BreastCancer$Class))
+table(ans,BreastCancer$Class)
+
+```
+
+
+#Eight and Final Model- Random Forest
+```{r}
+#Install and library the necessary package to run a Random Forest (RF)
+library(randomForest)
+
+#Using the training data sets- build the RF model. You can then use that RF model to predict the accuracy when applying it to the validation dataset.
+myrf <- randomForest(Class ~ .,train.df)
+myrf.pred <- predict(myrf, valid.df)
+
+#visualize the model in a table to see the confusion matrix of accurately predicted values.
+table(myrf.pred, valid.df$Class)
+```
+
+#Because we based our models and confusion matrix analysis on the training and validation data sets, we need to apply the projections to the full BreastCancer Dataset for final analysis.
+```{r}
+#Update all predicitons to full dataset- Breast Cancer
+#Reload the full dataset and clean it since changes were made to it throughout the code.
+data("BreastCancer")
+
+#Same as the beginning- Drop any NAs to clean the dataset using na.omit. This prevents future failures in the model that cannot process NAs.
+BreastCancer <- na.omit(BreastCancer)
+
+#ID is a categorical variable that is not used to predict relationships in our mdoels. Therefore, we will make the entire column NULL to maintain intergrity but not break the mdoels.
+BreastCancer$Id <- NULL
+
+myrf.predFull <- predict(myrf, BreastCancer)
+myrda.predFull <- predict(myrda, BreastCancer)
+mytree.predFull <- predict(mytree,BreastCancer,type="class")
+mynnet.predFull <- predict(mynnet,BreastCancer,type="class")
+mysvm.predFull <- predict(mysvm, BreastCancer)
+mynb.predFull <- predict(mynb,BreastCancer)
+
+```
+
+#Finally, we combine all the prediction models using the Majority Rules Ensamble Approach
+```{r}
+combine.classes<-data.frame(myrf.predFull, myrda.predFull$class,#myqda.pred,
+mytree.predFull,mynnet.predFull,mysvm.predFull, mynb.predFull$class)
+
+combine.classes$myrf.predFull<-ifelse(combine.classes$myrf.pred=="benign", 0, 1)
+combine.classes[,2]<-ifelse(combine.classes[,2]=="benign", 0, 1)
+combine.classes[,3]<-ifelse(combine.classes[,3]=="benign", 0, 1)
+combine.classes[,4]<-ifelse(combine.classes[,4]=="benign", 0, 1)
+combine.classes[,5]<-ifelse(combine.classes[,5]=="benign", 0, 1)
+combine.classes[,6]<-ifelse(combine.classes[,6]=="benign", 0, 1)
+majority.vote=rowSums(combine.classes)
+head(majority.vote)
+combine.classes[,7]<-rowSums(combine.classes)
+combine.classes[,8]<-ifelse(combine.classes[,7]>=3, "malignant", "benign")
+
+
+table <- table(combine.classes[,8], BreastCancer$Class)
+table
+
+accuracy <- sum(diag(table))/sum(table)
+accuracy*100
+
+```
+
